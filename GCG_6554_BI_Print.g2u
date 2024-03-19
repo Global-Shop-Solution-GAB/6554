@@ -1,0 +1,171 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String,"")
+V.Local.sSql.Declare(String,"")
+V.Local.sRet.Declare(STring,"")
+V.Local.sSO.Declare(String,"")
+v.Local.sJob.Declare
+
+F.Intrinsic.Control.SelectCase(V.Caller.Hook)
+
+
+	F.Intrinsic.Control.Case(16090)
+			
+		f.Intrinsic.Control.If(v.Passed.BIP_REPORTID,=,"000054")
+			f.ODBC.Connection!con.OpenCompanyConnection
+	 			f.Intrinsic.String.Build("Select Top 1 Order_no from BI_ACKNWLDGMNT where terminal = '{0}' and rptID = '{1}'", v.Passed.BIP_Terminal, v.Passed.BIP_REPORTID, v.Local.sSql)
+	 			f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSql, v.Local.sSO)
+	 		
+	 			f.Intrinsic.String.Build("Select date_order from ORDER_HEADER where order_No = '{0}' and record_no = '  D'", v.Local.sSO, v.Local.sSQL)
+				f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL, v.Local.sJob)
+			f.ODBC.Connection!con.Close
+			
+			f.Intrinsic.Control.If(v.Local.sJob.Trim, =, "")
+				f.Intrinsic.Control.End
+			f.Intrinsic.Control.EndIf
+			
+			F.Intrinsic.Control.CallSub(Print_Report)
+			v.Passed.Cancel.Set(1)
+		f.Intrinsic.Control.EndIf
+		
+		
+		f.Intrinsic.Control.If(v.Passed.BIP_REPORTID,=,"000055")
+			f.ODBC.Connection!con.OpenCompanyConnection
+	 			f.Intrinsic.String.Build("Select Top 1 Substring(Order_no, 0, 8)  from PRT_LASER_INVOICE where terminal_no = '{0}' and rptID = '{1}'", v.Passed.BIP_Terminal, v.Passed.BIP_REPORTID, v.Local.sSql)
+	 			f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSql, v.Local.sSO)
+	 		
+	 			f.Intrinsic.String.Build("Select date_order from ORDER_HEADER where order_No = '{0}' and record_no = '  D'", v.Local.sSO, v.Local.sSQL)
+				f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL, v.Local.sJob)
+				
+				f.Intrinsic.Control.If(v.Local.sJob.Trim, =, "")
+					f.Intrinsic.String.Build("Select FLAG_TIME_MATL from ORDER_HIST_HEAD where order_No = '{0}' ", v.Local.sSO, v.Local.sSQL)
+					f.ODBC.Connection!con.ExecuteAndReturn(v.Local.sSQL, v.Local.sJob)
+					f.Intrinsic.Control.If(v.Local.sJob.Trim, <>, "Y")
+						v.Local.sJob.Set("")
+					f.Intrinsic.Control.EndIf
+				f.Intrinsic.Control.EndIf
+			f.ODBC.Connection!con.Close
+			
+			f.Intrinsic.Control.If(v.Local.sJob.Trim, =, "")
+				f.Intrinsic.Control.End
+			f.Intrinsic.Control.EndIf
+			
+			F.Intrinsic.Control.CallSub(Print_ReportInv)
+			v.Passed.Cancel.Set(1)
+		f.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.CaseElse
+		F.Intrinsic.Control.End
+F.Intrinsic.Control.EndSelect
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.String.Build("Project: GCG_6197_OutSide_PO.g2u {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.Exit.Start
+F.Intrinsic.Control.SetErrorHandler("Exit_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String,"")
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Exit_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+Program.Sub.Exit.End
+
+Program.Sub.Print_Report.Start
+F.Intrinsic.Control.SetErrorHandler("Print_Report_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String,"")
+V.Local.iRunID.Declare(Long,0)
+V.Local.iLogID.Declare(Long,0)
+V.Local.iRPTID.Declare(Long,0)
+V.Local.sParams.Declare(String,"")
+V.Local.sValues.Declare(String,"")
+V.Local.iRet.Declare(Long,0)
+
+v.Local.sVCur.Declare(String, "")
+
+'v.Local.sVCur.Set(V.Passed.BIP_UseVendorCurr)
+'f.Intrinsic.Control.If(v.Local.sVCur.Trim, =, "")
+'	v.Local.sVCur.Set("Y")
+'f.Intrinsic.Control.EndIf
+
+V.Local.sParams.Set("Terminal*!*ReportID*!*IncludesTax*!*Dec*!*Logo")
+F.Intrinsic.String.Build("{0}*!*{1}*!*{2}*!*{3}*!*{4}", V.Passed.BIP_Terminal, V.Passed.BIP_REPORTID, "", "", "", V.Local.sValues)
+
+F.Global.BI.GetIDFromName("GCG_6554_OE_ACKNOWLEDGEMENT_EXT.rpt",V.Local.iRPTID)
+F.Global.BI.GetRunID(V.Local.iRunID)
+F.Global.BI.StartLogging(V.Local.iRunID,V.Local.iRPTID,-1,"",V.Local.iLogID)
+F.Global.BI.StopLogging(V.Local.iLogID)
+
+F.Global.BI.RunReportPreProcessor(V.Local.iRunID,V.Local.iLogID,V.Local.sParams,V.Local.sValues,"",-1,True,"",-1,"",-1,"","",V.Local.iRet)
+
+F.Intrinsic.Control.CallSub(Exit)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Print_Report_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.String.Build("Project: GCG_6197_OutSide_PO.g2u {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Print_Report.End
+
+Program.Sub.Print_ReportInv.Start
+F.Intrinsic.Control.SetErrorHandler("Print_Report_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String,"")
+V.Local.iRunID.Declare(Long,0)
+V.Local.iLogID.Declare(Long,0)
+V.Local.iRPTID.Declare(Long,0)
+V.Local.sParams.Declare(String,"")
+V.Local.sValues.Declare(String,"")
+V.Local.iRet.Declare(Long,0)
+
+v.Local.sVCur.Declare(String, "")
+
+'v.Local.sVCur.Set(V.Passed.BIP_UseVendorCurr)
+'f.Intrinsic.Control.If(v.Local.sVCur.Trim, =, "")
+'	v.Local.sVCur.Set("Y")
+'f.Intrinsic.Control.EndIf
+
+V.Local.sParams.Set("Terminal*!*ReportID*!*Track*!*Program*!*Ivctype*!*Prtship*!*Prtord*!*Logo")
+F.Intrinsic.String.Build("{0}*!*{1}*!*{2}*!*{3}*!*{4}*!*{5}*!*{6}*!*{7}", V.Passed.BIP_Terminal, V.Passed.BIP_REPORTID, "", "", "", "", "", "", V.Local.sValues)
+
+F.Global.BI.GetIDFromName("GCG_6554_OE_INVOICE_NEW.rpt",V.Local.iRPTID)
+F.Global.BI.GetRunID(V.Local.iRunID)
+F.Global.BI.StartLogging(V.Local.iRunID,V.Local.iRPTID,-1,"",V.Local.iLogID)
+F.Global.BI.StopLogging(V.Local.iLogID)
+
+F.Global.BI.RunReportPreProcessor(V.Local.iRunID,V.Local.iLogID,V.Local.sParams,V.Local.sValues,"",-1,True,"",-1,"",-1,"","",V.Local.iRet)
+
+F.Intrinsic.Control.CallSub(Exit)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Print_Report_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	F.Intrinsic.String.Build("Project: GCG_6197_OutSide_PO.g2u {0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Print_ReportInv.End
+
+Program.Sub.Comments.Start
+${$5$}$3.0.0.0$}$1
+${$6$}$aanazco$}$20211209121641399$}$7aQAV3Tor/tR9bkuakHbuzQlHVuXCGOzWmgyCV8UX8jKlVvLMLUujm6da7Vak1X1iOF3UWCddf4=
+Program.Sub.Comments.End
